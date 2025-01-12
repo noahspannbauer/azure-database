@@ -1,5 +1,5 @@
 {
-  "name": "@nestjs/azure-database",
+  "name": "@noahspan/azure-database",
   "version": "3.0.0",
   "description": "The Azure Table Storage module for Nest framework (node.js)",
   "main": "dist/index.js",

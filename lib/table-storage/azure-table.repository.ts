@@ -35,7 +35,9 @@ export class AzureTableStorageRepository<T> {
       await this.tableServiceClientInstance.createTable(tableName);
       return true;
     } catch (error) {
-      return this.handleRestErrors(error);
+      const errorMessage: string = await this.handleRestErrors(error);
+
+      throw new Error(errorMessage)
     }
   }
 
@@ -56,7 +58,9 @@ export class AzureTableStorageRepository<T> {
       logger.debug(`Entity fetched successfully`);
       return mappedEntity;
     } catch (error) {
-      return this.handleRestErrors(error);
+      const errorMessage: string = await this.handleRestErrors(error);
+
+      throw new Error(errorMessage)
     }
   }
 
@@ -76,7 +80,9 @@ export class AzureTableStorageRepository<T> {
       logger.debug(`Entities fetched successfully`);
       return entities;
     } catch (error) {
-      return this.handleRestErrors(error);
+      const errorMessage: string = await this.handleRestErrors(error);
+
+      throw new Error(errorMessage)
     }
   }
 
@@ -97,7 +103,9 @@ export class AzureTableStorageRepository<T> {
       logger.debug(`Entity created successfully`);
       return AzureEntityMapper.serialize<T>(result);
     } catch (error) {
-      return this.handleRestErrors(error);
+      const errorMessage: string = await this.handleRestErrors(error);
+
+      throw new Error(errorMessage)
     }
   }
 
@@ -120,7 +128,9 @@ export class AzureTableStorageRepository<T> {
       logger.debug(`Entity updated successfully`);
       return AzureEntityMapper.serialize<T>(result);
     } catch (error) {
-      return this.handleRestErrors(error);
+      const errorMessage: string = await this.handleRestErrors(error);
+
+      throw new Error(errorMessage)
     }
   }
 
@@ -129,47 +139,70 @@ export class AzureTableStorageRepository<T> {
     logger.debug(`- partitionKey: ${partitionKey}`);
     logger.debug(`- rowKey: ${rowKey}`);
 
-    const result = await this.manager.tableClientInstance.deleteEntity(partitionKey, rowKey);
+    try {
+      const result = await this.manager.tableClientInstance.deleteEntity(partitionKey, rowKey);
 
-    logger.debug(`Entity deleted successfully`);
-    return result;
+      logger.debug(`Entity deleted successfully`);
+      return result;
+    } catch (error) {
+      const errorMessage: string = await this.handleRestErrors(error);
+
+      throw new Error(errorMessage)
+    }
   }
 
-  private handleRestErrors(error: Error) {
+  private async handleRestErrors(error: Error): Promise<string> {
     // TODO: figure out how to parse odata errors
     if (!error.message.startsWith('{')) {
       throw new Error(error.message);
     }
 
     const err = JSON.parse(error.message);
+    let errorMessage: string;
 
     switch (err['odata.error'].code) {
       case 'TableAlreadyExists':
-        logger.error(`Error creating table. Table ${this.tableName} already exists.`);
+        errorMessage = `Error creating table. Table ${this.tableName} already exists.`;
+        logger.error(errorMessage);
+
         break;
       case 'TableNotFound':
-        logger.error(`Error creating entity. Table ${this.tableName} Not Found. Is it created?`);
+        errorMessage = `Error creating entity. Table ${this.tableName} Not Found. Is it created?`;
+        logger.error(errorMessage)
+
         break;
       case 'ResourceNotFound':
-        logger.error(`Error processing entity. Entity not found.`);
+        errorMessage = `Error processing entity. Entity not found.`;
+        logger.error(errorMessage);
+
         break;
       case 'InvalidInput':
-        logger.error(`Error creating entity:`);
+        errorMessage = (`Error creating entity:`);
+        logger.error(errorMessage);
+
         err['odata.error'].message.value.split('\n').forEach((line: string) => {
+          errorMessage += line
           logger.error(line);
         });
+
         break;
       case 'TableBeingDeleted':
-        logger.error(`Error creating entity. Table ${this.tableName} is being deleted. Try again later.`);
+        errorMessage = `Error creating entity. Table ${this.tableName} is being deleted. Try again later.`;
+        logger.error(errorMessage);
+
         break;
       case 'EntityAlreadyExists':
-        logger.error(`Error creating entity. Entity with the same partitionKey and rowKey already exists.`);
+        errorMessage = `Error creating entity. Entity with the same partitionKey and rowKey already exists.`;
+        logger.error(errorMessage);
+
         break;
       default:
+        errorMessage = error.message;
         logger.error(error);
+        
         break;
     }
 
-    return null;
+    return errorMessage;
   }
 }
