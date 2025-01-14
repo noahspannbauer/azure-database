@@ -1,9 +1,10 @@
-import { DeleteTableEntityResponse, TableEntity, TableEntityQueryOptions } from '@azure/data-tables';
+import { DeleteTableEntityResponse, RestError, TableEntity, TableEntityQueryOptions } from '@azure/data-tables';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { AZURE_TABLE_STORAGE_FEATURE_OPTIONS, AZURE_TABLE_STORAGE_NAME } from './azure-table.constant';
 import { AzureTableStorageFeatureOptions } from './azure-table.interface';
 import { AzureEntityMapper } from './azure-table.mapper';
 import { AzureTableStorageService } from './azure-table.service';
+import { CustomError } from '@noahspan/noahspan-modules';
 
 const logger = new Logger(`AzureStorageRepository`);
 
@@ -35,9 +36,10 @@ export class AzureTableStorageRepository<T> {
       await this.tableServiceClientInstance.createTable(tableName);
       return true;
     } catch (error) {
-      const errorMessage: string = await this.handleRestErrors(error);
+      const restError = error as RestError;
+      const customError: CustomError = await this.handleRestErrors(restError);
 
-      throw new Error(errorMessage)
+      throw customError;
     }
   }
 
@@ -58,9 +60,10 @@ export class AzureTableStorageRepository<T> {
       logger.debug(`Entity fetched successfully`);
       return mappedEntity;
     } catch (error) {
-      const errorMessage: string = await this.handleRestErrors(error);
+      const restError = error as RestError;
+      const customError: CustomError = await this.handleRestErrors(restError);
 
-      throw new Error(errorMessage)
+      throw customError;
     }
   }
 
@@ -80,9 +83,10 @@ export class AzureTableStorageRepository<T> {
       logger.debug(`Entities fetched successfully`);
       return entities;
     } catch (error) {
-      const errorMessage: string = await this.handleRestErrors(error);
+      const restError = error as RestError;
+      const customError: CustomError = await this.handleRestErrors(restError);
 
-      throw new Error(errorMessage)
+      throw customError;
     }
   }
 
@@ -103,9 +107,10 @@ export class AzureTableStorageRepository<T> {
       logger.debug(`Entity created successfully`);
       return AzureEntityMapper.serialize<T>(result);
     } catch (error) {
-      const errorMessage: string = await this.handleRestErrors(error);
+      const restError = error as RestError;
+      const customError: CustomError = await this.handleRestErrors(restError);
 
-      throw new Error(errorMessage)
+      throw customError;
     }
   }
 
@@ -128,9 +133,10 @@ export class AzureTableStorageRepository<T> {
       logger.debug(`Entity updated successfully`);
       return AzureEntityMapper.serialize<T>(result);
     } catch (error) {
-      const errorMessage: string = await this.handleRestErrors(error);
+      const restError = error as RestError;
+      const customError: CustomError = await this.handleRestErrors(restError);
 
-      throw new Error(errorMessage)
+      throw customError;
     }
   }
 
@@ -145,22 +151,24 @@ export class AzureTableStorageRepository<T> {
       logger.debug(`Entity deleted successfully`);
       return result;
     } catch (error) {
-      const errorMessage: string = await this.handleRestErrors(error);
+      const restError = error as RestError;
+      const customError: CustomError = await this.handleRestErrors(restError);
 
-      throw new Error(errorMessage)
+      throw customError;
     }
   }
 
-  private async handleRestErrors(error: Error): Promise<string> {
+  private async handleRestErrors(error: RestError): Promise<CustomError> {
     // TODO: figure out how to parse odata errors
     if (!error.message.startsWith('{')) {
       throw new Error(error.message);
     }
 
-    const err = JSON.parse(error.message);
+    // const err = JSON.parse(error.message);
+    const errorCode: string = error.details['odataError']['code']
     let errorMessage: string;
 
-    switch (err['odata.error'].code) {
+    switch (errorCode) {
       case 'TableAlreadyExists':
         errorMessage = `Error creating table. Table ${this.tableName} already exists.`;
         logger.error(errorMessage);
@@ -180,7 +188,7 @@ export class AzureTableStorageRepository<T> {
         errorMessage = (`Error creating entity:`);
         logger.error(errorMessage);
 
-        err['odata.error'].message.value.split('\n').forEach((line: string) => {
+        error.details['odataError']['message']['value'].split('\n').forEach((line: string) => {
           errorMessage += line
           logger.error(line);
         });
@@ -203,6 +211,6 @@ export class AzureTableStorageRepository<T> {
         break;
     }
 
-    return errorMessage;
+    return new CustomError(errorMessage, errorCode, error.statusCode);
   }
 }

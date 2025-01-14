@@ -1,6 +1,6 @@
 {
   "name": "@noahspan/azure-database",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "The Azure Table Storage module for Nest framework (node.js)",
   "main": "dist/index.js",
   "author": {
@@ -35,7 +35,8 @@
     "@azure/cosmos": "^4.0.0",
     "@azure/data-tables": "^13.2.2",
     "@nestjs/common": "^9.0.0 || ^10.0.0",
-    "@nestjs/core": "^9.0.0 || ^10.0.0"
+    "@nestjs/core": "^9.0.0 || ^10.0.0",
+    "@noahspan/noahspan-modules": "^0.5.1"
   },
   "devDependencies": {
     "@commitlint/cli": "19.6.1",
