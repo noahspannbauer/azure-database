@@ -20,7 +20,9 @@ export class AzureTableStorageService {
     if (this.tableClient) {
       return this.tableClient;
     }
-    this.tableClient = TableClient.fromConnectionString(process.env.AZURE_STORAGE_CONNECTION_STRING, this.tableName);
+    this.tableClient = TableClient.fromConnectionString(process.env.AZURE_STORAGE_CONNECTION_STRING, this.tableName, {
+      allowInsecureConnection: true
+    });
     return this.tableClient;
   }
 }
